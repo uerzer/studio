@@ -14,15 +14,36 @@ import { analyzeFocusAndProvideInsights } from "@/ai/flows/focus-analysis-optimi
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/icons";
+import {Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue} from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import {z} from "zod";
+import {useForm} from "react-hook-form";
+import {zodResolver} from "@hookform/resolvers/zod";
 
 interface Task {
   id: string;
   name: string;
+  description: string;
   completed: boolean;
 }
 
 const defaultWorkDuration = 25;
 const defaultBreakDuration = 5;
+
+const taskSchema = z.object({
+  name: z.string().min(2, {
+    message: "Task name must be at least 2 characters.",
+  }),
+  description: z.string().optional(),
+});
 
 export default function Home() {
   const [workDuration, setWorkDuration] = useState(defaultWorkDuration);
@@ -31,7 +52,6 @@ export default function Home() {
   const [timeRemaining, setTimeRemaining] = useState(workDuration * 60);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [newTaskName, setNewTaskName] = useState("");
   const [goal, setGoal] = useState("");
   const [energyLevel, setEnergyLevel] = useState<"Low" | "Medium" | "High">("Medium");
   const [suggestedTask, setSuggestedTask] = useState<PrioritizeTaskOutput | null>(null);
@@ -40,6 +60,15 @@ export default function Home() {
   const { toast } = useToast();
 
   const userId = "user-001"; // Replace with actual user ID
+
+  // React Hook Form setup
+  const form = useForm<z.infer<typeof taskSchema>>({
+    resolver: zodResolver(taskSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -76,21 +105,22 @@ export default function Home() {
     setTimeRemaining(workDuration * 60);
   };
 
-  const addTask = () => {
-    if (newTaskName.trim() !== "") {
+  const addTask = (values: z.infer<typeof taskSchema>) => {
       const newTask: Task = {
         id: Date.now().toString(),
-        name: newTaskName,
+        name: values.name,
+        description: values.description || "",
         completed: false,
       };
       setTasks([...tasks, newTask]);
-      setNewTaskName("");
-    }
+      form.reset();
   };
 
-  const editTask = (id: string, newName: string) => {
+  const editTask = (id: string, newName: string, newDescription: string) => {
     setTasks(
-      tasks.map((task) => (task.id === id ? { ...task, name: newName } : task))
+      tasks.map((task) =>
+        task.id === id ? { ...task, name: newName, description: newDescription } : task
+      )
     );
   };
 
@@ -208,16 +238,19 @@ export default function Home() {
           </div>
           <div>
             <Label htmlFor="energy-level">Energy Level</Label>
-            <select
-              id="energy-level"
-              className="w-full p-2 border rounded"
-              value={energyLevel}
-              onChange={(e) => setEnergyLevel(e.target.value as "Low" | "Medium" | "High")}
-            >
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-            </select>
+            <Select value={energyLevel} onValueChange={(value) => setEnergyLevel(value as "Low" | "Medium" | "High")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select energy level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Energy Levels</SelectLabel>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="goal">Goal</Label>
@@ -255,25 +288,54 @@ export default function Home() {
           <CardDescription>Manage your tasks</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex space-x-2">
-            <Input
-              type="text"
-              placeholder="New task name"
-              value={newTaskName}
-              onChange={(e) => setNewTaskName(e.target.value)}
-            />
-            <Button onClick={addTask}>Add Task</Button>
-          </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(addTask)} className="flex flex-col space-y-2">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Task Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="New task name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Task Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="New task description" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit">Add Task</Button>
+            </form>
+          </Form>
           <ul className="mt-4 space-y-2">
             {tasks.map((task) => (
-              <li key={task.id} className="flex items-center justify-between">
+              <li key={task.id} className="flex items-start justify-between">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id={`task-${task.id}`}
                     checked={task.completed}
                     onCheckedChange={() => toggleComplete(task.id)}
                   />
-                  <Label htmlFor={`task-${task.id}`}>{task.name}</Label>
+                  <div className="flex flex-col">
+                    <Label htmlFor={`task-${task.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      {task.name}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {task.description}
+                    </p>
+                  </div>
                 </div>
                 <div>
                   <Button
@@ -281,8 +343,9 @@ export default function Home() {
                     size="sm"
                     onClick={() => {
                       const newName = prompt("Enter new task name", task.name);
-                      if (newName) {
-                        editTask(task.id, newName);
+                      const newDescription = prompt("Enter new task description", task.description);
+                      if (newName && newDescription) {
+                        editTask(task.id, newName, newDescription);
                       }
                     }}
                   >
