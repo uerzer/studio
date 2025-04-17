@@ -43,6 +43,40 @@ const taskSchema = z.object({
   description: z.string().optional(),
 });
 
+// Custom hook for Text-to-Speech
+const useTextToSpeech = () => {
+  const [isSpeechAvailable, setIsSpeechAvailable] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Check if responsiveVoice is defined
+      if (window.responsiveVoice) {
+        setIsSpeechAvailable(true);
+      } else {
+        // Load responsiveVoice dynamically if it's not already loaded
+        const script = document.createElement('script');
+        script.src = 'https://code.responsivevoice.org/responsivevoice.js';
+        script.async = true;
+        document.body.appendChild(script);
+
+        script.onload = () => {
+          setIsSpeechAvailable(true);
+        };
+      }
+    }
+  }, []);
+
+  const speak = (text: string) => {
+    if (isSpeechAvailable) {
+      window.responsiveVoice.speak(text);
+    } else {
+      console.warn("Text-to-speech is not available.");
+    }
+  };
+
+  return { speak, isSpeechAvailable };
+};
+
 export default function Home() {
   const [workDuration, setWorkDuration] = useState(defaultWorkDuration);
   const [breakDuration, setBreakDuration] = useState(defaultBreakDuration);
@@ -55,6 +89,7 @@ export default function Home() {
   const [focusSuggestion, setFocusSuggestion] = useState<FocusCompanionOutput | null>(null);
   const [showInsights, setShowInsights] = useState(false);
   const { toast } = useToast();
+    const { speak } = useTextToSpeech(); // Use the text-to-speech hook
 
   const userId = "user-001"; // Replace with actual user ID
 
@@ -88,10 +123,13 @@ export default function Home() {
 
   const handleTimerEnd = () => {
     // Display a toast notification
+    const message = isWorking ? "Work session complete! Time for a break." : "Break time's over! Get back to work!";
     toast({
       title: isWorking ? "Work session complete!" : "Break time's over!",
       description: isWorking ? "Time for a break." : "Get back to work!",
     });
+
+    speak(message); // Speak the notification message
 
     setIsWorking(!isWorking);
     setTimeRemaining((isWorking ? breakDuration : workDuration) * 60);
@@ -153,6 +191,9 @@ export default function Home() {
         timeRemaining: timeRemaining,
       });
       setFocusSuggestion(suggestion);
+        if (suggestion?.suggestion) {
+          speak(`Focus Suggestion: ${suggestion.suggestion}`); // Speak the focus suggestion
+        }
     } catch (error: any) {
       toast({
         title: "Failed to get focus suggestion",
@@ -160,7 +201,7 @@ export default function Home() {
         variant: "destructive",
       });
     }
-  }, [userId, goal, energyLevel, currentTask, timeRemaining, toast]);
+  }, [userId, goal, energyLevel, currentTask, timeRemaining, toast, speak]);
 
   // Speech Recognition hook
   const useSpeechRecognition = (setValue: (value: string) => void, isDictating: boolean) => {
