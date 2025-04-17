@@ -1,1 +1,3 @@
-// Flows will be imported for their side effects in this file.
+import '@/ai/flows/focus-analysis-optimization-insights.ts';
+import '@/ai/flows/adaptive-pomodoro-cycles.ts';
+import '@/ai/flows/intelligent-task-prioritization.ts';
