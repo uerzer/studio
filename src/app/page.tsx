@@ -8,9 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { prioritizeTask, PrioritizeTaskOutput } from "@/ai/flows/intelligent-task-prioritization";
-import { suggestAdaptivePomodoroCycle, AdaptivePomodoroCycleOutput } from "@/ai/flows/adaptive-pomodoro-cycles";
-import { analyzeFocusAndProvideInsights } from "@/ai/flows/focus-analysis-optimization-insights";
+import { getFocusCompanionSuggestion, FocusCompanionOutput } from "@/ai/flows/focus-ai-companion-flow";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Textarea } from "@/components/ui/textarea";
 import { Icons } from "@/components/icons";
@@ -54,8 +52,7 @@ export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [goal, setGoal] = useState("");
   const [energyLevel, setEnergyLevel] = useState<"Low" | "Medium" | "High">("Medium");
-  const [suggestedTask, setSuggestedTask] = useState<PrioritizeTaskOutput | null>(null);
-  const [suggestedCycle, setSuggestedCycle] = useState<AdaptivePomodoroCycleOutput | null>(null);
+  const [focusSuggestion, setFocusSuggestion] = useState<FocusCompanionOutput | null>(null);
   const [showInsights, setShowInsights] = useState(false);
   const { toast } = useToast();
 
@@ -146,66 +143,24 @@ export default function Home() {
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
-  const suggestTask = useCallback(async () => {
+  const getFocusSuggestion = useCallback(async () => {
     try {
-      const taskSuggestion = await prioritizeTask({
+      const suggestion = await getFocusCompanionSuggestion({
         userId: userId,
         goal: goal,
         energyLevel: energyLevel,
+        currentTaskName: currentTask?.name || "No task selected",
+        timeRemaining: timeRemaining,
       });
-      setSuggestedTask(taskSuggestion);
+      setFocusSuggestion(suggestion);
     } catch (error: any) {
       toast({
-        title: "Failed to suggest task",
+        title: "Failed to get focus suggestion",
         description: error.message,
         variant: "destructive",
       });
     }
-  }, [userId, goal, energyLevel, toast]);
-
-  const suggestCycle = useCallback(async () => {
-    try {
-      const cycleSuggestion = await suggestAdaptivePomodoroCycle({
-        energyLevel: energyLevel,
-        taskType: currentTask?.name || "General Task",
-        historicalData: "", // Implement fetching historical data
-      });
-      setSuggestedCycle(cycleSuggestion);
-      setWorkDuration(cycleSuggestion.suggestedWorkDuration);
-      setBreakDuration(cycleSuggestion.suggestedBreakDuration);
-      setTimeRemaining(cycleSuggestion.suggestedWorkDuration * 60);
-    } catch (error: any) {
-      toast({
-        title: "Failed to suggest cycle",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  }, [energyLevel, currentTask, toast]);
-
-  const getInsights = useCallback(async () => {
-    try {
-      // Call the analyzeFocusAndProvideInsights function
-      const insights = await analyzeFocusAndProvideInsights({ userId: userId });
-      // Display the insights in a toast notification
-      toast({
-        title: "Focus Insights",
-        description: (
-          <>
-            <p>Peak Productivity Times: {insights.peakProductivityTimes}</p>
-            <p>Recommendations: {insights.recommendations}</p>
-          </>
-        ),
-      });
-    } catch (error: any) {
-      // Handle any errors that occur during the process
-      toast({
-        title: "Failed to retrieve insights",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  }, [userId, toast]);
+  }, [userId, goal, energyLevel, currentTask, timeRemaining, toast]);
 
   // Speech Recognition hook
   const useSpeechRecognition = (setValue: (value: string) => void, isDictating: boolean) => {
@@ -310,17 +265,9 @@ export default function Home() {
               onChange={(e) => setGoal(e.target.value)}
             />
           </div>
-          {suggestedTask && (
+          {focusSuggestion && (
             <div className="border rounded p-2">
-              <p>Suggested Task: {suggestedTask.taskName}</p>
-              <p>Justification: {suggestedTask.justification}</p>
-            </div>
-          )}
-          {suggestedCycle && (
-            <div className="border rounded p-2">
-              <p>Suggested Work Duration: {suggestedCycle.suggestedWorkDuration}</p>
-              <p>Suggested Break Duration: {suggestedCycle.suggestedBreakDuration}</p>
-              <p>Justification: {suggestedCycle.justification}</p>
+              <p>Focus Suggestion: {focusSuggestion.suggestion}</p>
             </div>
           )}
         </CardContent>
@@ -434,9 +381,7 @@ export default function Home() {
       </Card>
 
       <div className="flex justify-center space-x-4 mt-4">
-        <Button onClick={suggestTask}>Suggest Task</Button>
-        <Button onClick={suggestCycle}>Suggest Cycle</Button>
-        <Button onClick={getInsights}>Get Insights</Button>
+        <Button onClick={getFocusSuggestion}>Get Focus Suggestion</Button>
       </div>
     </div>
   );
