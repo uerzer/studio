@@ -70,6 +70,10 @@ export default function Home() {
     },
   });
 
+  // Voice dictation states
+  const [isDictatingName, setIsDictatingName] = useState(false);
+  const [isDictatingDescription, setIsDictatingDescription] = useState(false);
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -203,6 +207,50 @@ export default function Home() {
     }
   }, [userId, toast]);
 
+  // Speech Recognition hook
+  const useSpeechRecognition = (setValue: (value: string) => void, isDictating: boolean) => {
+    useEffect(() => {
+      if (!('webkitSpeechRecognition' in window)) {
+        console.log('Speech Recognition Not Available');
+        return;
+      }
+
+      const recognition = new webkitSpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0])
+          .map(result => result.transcript)
+          .join('');
+
+        setValue(transcript);
+      };
+
+      if (isDictating) {
+        recognition.start();
+      } else {
+        recognition.stop();
+      }
+
+      return () => {
+        recognition.stop();
+      };
+    }, [isDictating, setValue]);
+  };
+
+  // Use the hook for the task name field
+  useSpeechRecognition((value) => {
+    form.setValue("name", value);
+  }, isDictatingName);
+
+  // Use the hook for the task description field
+  useSpeechRecognition((value) => {
+    form.setValue("description", value);
+  }, isDictatingDescription);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <Card className="w-full max-w-md">
@@ -296,9 +344,18 @@ export default function Home() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Task Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="New task name" {...field} />
-                    </FormControl>
+                    <div className="flex rounded-md shadow-sm">
+                      <FormControl>
+                        <Input placeholder="New task name" {...field} />
+                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsDictatingName(!isDictatingName)}
+                      >
+                        {isDictatingName ? <Icons.pause /> : <Icons.mic />}
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -309,9 +366,18 @@ export default function Home() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Task Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="New task description" {...field} />
-                    </FormControl>
+                    <div className="flex rounded-md shadow-sm">
+                      <FormControl>
+                        <Textarea placeholder="New task description" {...field} />
+                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsDictatingDescription(!isDictatingDescription)}
+                      >
+                        {isDictatingDescription ? <Icons.pause /> : <Icons.mic />}
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
