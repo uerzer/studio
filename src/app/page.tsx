@@ -60,6 +60,10 @@ const useTextToSpeech = () => {
         document.body.appendChild(script);
 
         script.onload = () => {
+            // Initialize responsiveVoice with API key if it's not already initialized
+            if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
+              window.responsiveVoice.apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
+            }
           setIsSpeechAvailable(true);
         };
       }
