@@ -342,7 +342,7 @@ export default function Home() {
                     <FormLabel>Task Name</FormLabel>
                     <div className="flex rounded-md shadow-sm">
                       <FormControl>
-                        <Input placeholder="New task name" {...field} />
+                        <Input placeholder="Enter task name" {...field} />
                       </FormControl>
                       <Button
                         type="button"
@@ -364,7 +364,7 @@ export default function Home() {
                     <FormLabel>Task Description</FormLabel>
                     <div className="flex rounded-md shadow-sm">
                       <FormControl>
-                        <Textarea placeholder="New task description" {...field} />
+                        <Textarea placeholder="Enter task description" {...field} />
                       </FormControl>
                       <Button
                         type="button"
@@ -435,3 +435,4 @@ export default function Home() {
     </div>
   );
 }
+
