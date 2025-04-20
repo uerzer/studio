@@ -5,10 +5,8 @@ FocusFlow AI is an intelligent task management app designed to optimize your pro
 ## Key Features
 
 *   **Intelligent Task Prioritization:**  FocusFlow AI leverages AI to analyze your tasks and prioritize them based on factors like deadlines, importance, and your personal energy levels. Say goodbye to overwhelming to-do lists and hello to focused, impactful work sessions.
-*   **Adaptive Pomodoro Cycles:**  Optimize your work intervals with AI-driven Pomodoro cycles that adapt to your real-time energy levels.  The app intelligently adjusts work and break durations to maximize focus and prevent burnout.
-*   **Seamless Integration:** Connect FocusFlow AI with your existing task management tools (Asana, Todoist, Notion) for a unified workflow.
-
-
+*   **Voice Dictation:**  Easily add new tasks and notes using voice dictation, streamlining your workflow and saving you time.
+*   **Text-to-Speech Mode:**  Listen to your task list and reminders with the text-to-speech mode, perfect for auditory learners or when you're on the go.
 ## Getting Started
 
 1.  **Connect Your Task Manager:**  Link your preferred task management service within the app settings.
@@ -16,6 +14,8 @@ FocusFlow AI is an intelligent task management app designed to optimize your pro
 3.  **Focus with Adaptive Pomodoro:**  Start a work session and experience personalized Pomodoro cycles that adapt to your energy.
 
 
+*   **Adaptive Pomodoro Cycles:**  Optimize your work intervals with AI-driven Pomodoro cycles that adapt to your real-time energy levels.  The app intelligently adjusts work and break durations to maximize focus and prevent burnout.
+*   **Seamless Integration:** Connect FocusFlow AI with your existing task management tools (Asana, Todoist, Notion) for a unified workflow.
 ## Project Files
 
 *   README.md

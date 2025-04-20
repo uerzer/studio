@@ -25,14 +25,15 @@ import {z} from "zod";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import { prioritizeTask, PrioritizeTaskOutput } from "@/ai/flows/intelligent-task-prioritization";
-
+import TextToSpeech from "@/components/TextToSpeech";
+import { Play } from "lucide-react"; // Import the Play icon
+import VoiceDictation from "@/components/VoiceDictation"; // Import the VoiceDictation component
 interface Task {
   id: string;
   name: string;
   description: string;
   completed: boolean;
 }
-
 const defaultWorkDuration = 25;
 const defaultBreakDuration = 5;
 
@@ -226,105 +227,113 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>FocusFriend AI</CardTitle>
-          <CardDescription>
-            {isWorking ? "Work Session" : "Break Time"} - {secondsToMinutesAndSeconds(timeRemaining)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col space-y-4">
-          {currentTask && <p>Current Task: {currentTask.name}</p>}
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="work-duration">Work Duration ({workDuration} min)</Label>
-            <Slider
-              id="work-duration"
-              defaultValue={[workDuration]}
-              max={60}
-              min={1}
-              step={1}
-              onValueChange={(value) => setWorkDuration(value[0])}
-            />
-          </div>
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="break-duration">Break Duration ({breakDuration} min)</Label>
-            <Slider
-              id="break-duration"
-              defaultValue={[breakDuration]}
-              max={30}
-              min={1}
-              step={1}
-              onValueChange={(value) => setBreakDuration(value[0])}
-            />
-          </div>
-          <div>
-            <Label htmlFor="energy-level">Energy Level</Label>
-            <Select value={energyLevel} onValueChange={(value) => setEnergyLevel(value as "Low" | "Medium" | "High")}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select energy level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel>Energy Levels</SelectLabel>
-                  <SelectItem value="Low">Low</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="High">High</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit((values) => setGoal(values.goal))} className="flex flex-col space-y-2">
-              <FormField
-                control={form.control}
-                name="goal"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Goal</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="What do you want to achieve?"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+    <>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>FocusFriend AI</CardTitle>
+            <CardDescription>
+              {isWorking ? "Work Session" : "Break Time"} - {secondsToMinutesAndSeconds(timeRemaining)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col space-y-4">
+            {currentTask && <p>Current Task: {currentTask.name}</p>}
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="work-duration">Work Duration ({workDuration} min)</Label>
+              <Slider
+                id="work-duration"
+                defaultValue={[workDuration]}
+                max={60}
+                min={1}
+                step={1}
+                onValueChange={(value) => setWorkDuration(value[0])}
               />
-              <Button type="submit">Set Goal</Button>
-            </form>
-          </Form>
-          {aiTaskSuggestion && (
-            <div className="border rounded p-2">
-              <p>AI Task Suggestion: {aiTaskSuggestion.taskName}</p>
-              <p>Justification: {aiTaskSuggestion.justification}</p>
-              <Button onClick={() => {
-                const task = {
-                  id: aiTaskSuggestion.taskId,
-                  name: aiTaskSuggestion.taskName,
-                  description: aiTaskSuggestion.justification,
-                  completed: false,
-                };
-                handleSelectTask(task);
-              }}>Select Task</Button>
             </div>
-          )}
-          {focusSuggestion && (
-            <div className="border rounded p-2">
-              <p>Focus Suggestion: {focusSuggestion.suggestion}</p>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="break-duration">Break Duration ({breakDuration} min)</Label>
+              <Slider
+                id="break-duration"
+                defaultValue={[breakDuration]}
+                max={30}
+                min={1}
+                step={1}
+                onValueChange={(value) => setBreakDuration(value[0])}
+              />
             </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button onClick={toggleTimer}>{isWorking ? "Pause" : "Start"}</Button>
-          <Button variant="secondary" onClick={resetTimer}>Reset</Button>
-        </CardFooter>
-      </Card>
+            <div>
+              <Label htmlFor="energy-level">Energy Level</Label>
+              <Select value={energyLevel} onValueChange={(value) => setEnergyLevel(value as "Low" | "Medium" | "High")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select energy level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Energy Levels</SelectLabel>
+                    <SelectItem value="Low">Low</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((values) => setGoal(values.goal))} className="flex flex-col space-y-2">
+                <FormField
+                  control={form.control}
+                  name="goal"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Goal</FormLabel>
+                      <FormControl>
+                        <>
+                          <Input
+                            placeholder="What do you want to achieve?"
+                            {...field}
+                          />
+                          <VoiceDictation
+                            onResult={(text) => field.onChange(text)}
+                            className="absolute right-2 top-2"
+                          />
+                        </>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit">Set Goal</Button>
+              </form>
+            </Form>
+            {aiTaskSuggestion && (
+              <div className="border rounded p-2">
+                <p>AI Task Suggestion: {aiTaskSuggestion.taskName}</p>
+                <p>Justification: {aiTaskSuggestion.justification}</p>
+                <Button onClick={() => {
+                  const task = {
+                    id: aiTaskSuggestion.taskId,
+                    name: aiTaskSuggestion.taskName,
+                    description: aiTaskSuggestion.justification,
+                    completed: false,
+                  };
+                  handleSelectTask(task);
+                }}>Select Task</Button>
+              </div>
+            )}
+            {focusSuggestion && (
+              <div className="border rounded p-2">
+                <p>Focus Suggestion: {focusSuggestion.suggestion}</p>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button onClick={toggleTimer}>{isWorking ? "Pause" : "Start"}</Button>
+            <Button variant="secondary" onClick={resetTimer}>Reset</Button>
+          </CardFooter>
+        </Card>
 
-      <div className="flex justify-center space-x-4 mt-4">
-        <Button onClick={getFocusSuggestion}>Get Focus Suggestion</Button>
+        <div className="flex justify-center space-x-4 mt-4">
+          <Button onClick={getFocusSuggestion}>Get Focus Suggestion</Button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
