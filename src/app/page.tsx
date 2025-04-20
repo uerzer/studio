@@ -25,7 +25,6 @@ import {z} from "zod";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import { prioritizeTask, PrioritizeTaskOutput } from "@/ai/flows/intelligent-task-prioritization";
-import TextToSpeech from "@/components/TextToSpeech";
 import { Play } from "lucide-react"; // Import the Play icon
 import VoiceDictation from "@/components/VoiceDictation"; // Import the VoiceDictation component
 interface Task {
@@ -43,65 +42,33 @@ const goalSchema = z.object({
   }),
 });
 
-// Custom hook for Text-to-Speech
 const useTextToSpeech = () => {
-  const [isSpeechAvailable, setIsSpeechAvailable] = useState(false);
+  const [isSpeechReady, setIsSpeechReady] = useState(false);
 
   useEffect(() => {
-    const initializeSpeech = () => {
-      if (typeof window !== 'undefined') {
-        if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
-          const apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
-          if (apiKey) {
-            if (window.responsiveVoice) {
-              window.responsiveVoice.apiKey = apiKey;
-              setIsSpeechAvailable(true);
-            }
-
-          } else {
-            console.warn("ResponsiveVoice API key is missing. Text-to-speech will be unavailable.");
-            setIsSpeechAvailable(false);
-          }
-        } else if (window.responsiveVoice) {
-          setIsSpeechAvailable(true);
-        } else {
-          // Load responsiveVoice dynamically if it's not already loaded
-          const script = document.createElement('script');
-          script.src = 'https://code.responsivevoice.org/responsivevoice.js';
-          script.async = true;
-          script.onload = () => {
-            if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
-              const apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
-              if (apiKey) {
-                if (window.responsiveVoice) {
-                  window.responsiveVoice.apiKey = apiKey;
-                  setIsSpeechAvailable(true);
-                }
-              } else {
-                console.warn("ResponsiveVoice API key is missing. Text-to-speech will be unavailable.");
-                setIsSpeechAvailable(false);
-              }
-            } else if (window.responsiveVoice) {
-              setIsSpeechAvailable(true);
-            }
-          };
-          document.body.appendChild(script);
-        }
-      }
-    };
-
-    initializeSpeech();
+    if ('speechSynthesis' in window) {
+      setIsSpeechReady(true);
+    } else {
+      console.warn('Speech synthesis not supported in this browser.');
+      setIsSpeechReady(false);
+    }
   }, []);
 
-  const speak = (text: string) => {
-    if (isSpeechAvailable && window.responsiveVoice) {
-      window.responsiveVoice.speak(text);
+  const speak = (text: string, voiceName?: string) => {
+    if (isSpeechReady) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      if (voiceName) {
+        const voices = window.speechSynthesis.getVoices();
+        const voice = voices.find((v) => v.name === voiceName);
+        if (voice) utterance.voice = voice;
+      }
+      window.speechSynthesis.speak(utterance);
     } else {
       console.warn("Text-to-speech is not available.");
     }
   };
 
-  return { speak, isSpeechAvailable };
+  return { speak };
 };
 
 export default function Home() {
@@ -114,7 +81,6 @@ export default function Home() {
   const [goal, setGoal] = useState("");
   const [energyLevel, setEnergyLevel] = useState<"Low" | "Medium" | "High">("Medium");
   const [focusSuggestion, setFocusSuggestion] = useState<FocusCompanionOutput | null>(null);
-  const [showInsights, setShowInsights] = useState(false);
   const { toast } = useToast();
   const { speak } = useTextToSpeech(); // Use the text-to-speech hook
   const [aiTaskSuggestion, setAiTaskSuggestion] = useState<PrioritizeTaskOutput | null>(null);
