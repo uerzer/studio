@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { getFocusCompanionSuggestion, FocusCompanionOutput } from "@/ai/flows/focus-ai-companion-flow";
@@ -25,6 +24,7 @@ import {
 import {z} from "zod";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
+import { prioritizeTask, PrioritizeTaskOutput } from "@/ai/flows/intelligent-task-prioritization";
 
 interface Task {
   id: string;
@@ -36,11 +36,10 @@ interface Task {
 const defaultWorkDuration = 25;
 const defaultBreakDuration = 5;
 
-const taskSchema = z.object({
-  name: z.string().min(2, {
-    message: "Task name must be at least 2 characters.",
+const goalSchema = z.object({
+  goal: z.string().min(2, {
+    message: "Goal must be at least 2 characters.",
   }),
-  description: z.string().optional(),
 });
 
 // Custom hook for Text-to-Speech
@@ -113,22 +112,24 @@ export default function Home() {
   const [focusSuggestion, setFocusSuggestion] = useState<FocusCompanionOutput | null>(null);
   const [showInsights, setShowInsights] = useState(false);
   const { toast } = useToast();
-    const { speak } = useTextToSpeech(); // Use the text-to-speech hook
+  const { speak } = useTextToSpeech(); // Use the text-to-speech hook
+  const [aiTaskSuggestion, setAiTaskSuggestion] = useState<PrioritizeTaskOutput | null>(null);
 
   const userId = "user-001"; // Replace with actual user ID
 
   // React Hook Form setup
-  const form = useForm<z.infer<typeof taskSchema>>({
-    resolver: zodResolver(taskSchema),
+  const form = useForm<z.infer<typeof goalSchema>>({
+    resolver: zodResolver(goalSchema),
     defaultValues: {
-      name: "",
-      description: "",
+      goal: "",
     },
   });
 
-  // Voice dictation states
-  const [isDictatingName, setIsDictatingName] = useState(false);
-  const [isDictatingDescription, setIsDictatingDescription] = useState(false);
+  useEffect(() => {
+    if (goal) {
+      getAiTaskSuggestion();
+    }
+  }, [goal, energyLevel]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -168,37 +169,6 @@ export default function Home() {
     setTimeRemaining(workDuration * 60);
   };
 
-  const addTask = (values: z.infer<typeof taskSchema>) => {
-      const newTask: Task = {
-        id: Date.now().toString(),
-        name: values.name,
-        description: values.description || "",
-        completed: false,
-      };
-      setTasks([...tasks, newTask]);
-      form.reset();
-  };
-
-  const editTask = (id: string, newName: string, newDescription: string) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, name: newName, description: newDescription } : task
-      )
-    );
-  };
-
-  const deleteTask = (id: string) => {
-    setTasks(tasks.filter((task) => task.id !== id));
-  };
-
-  const toggleComplete = (id: string) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
-
   const secondsToMinutesAndSeconds = (timeInSeconds: number): string => {
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = timeInSeconds % 60;
@@ -227,49 +197,33 @@ export default function Home() {
     }
   }, [userId, goal, energyLevel, currentTask, timeRemaining, toast, speak]);
 
-  // Speech Recognition hook
-  const useSpeechRecognition = (setValue: (value: string) => void, isDictating: boolean) => {
-    useEffect(() => {
-      if (!('webkitSpeechRecognition' in window)) {
-        console.log('Speech Recognition Not Available');
-        return;
+    const getAiTaskSuggestion = useCallback(async () => {
+      if (!goal) {
+        return; // Don't fetch suggestion if goal is empty
       }
-
-      const recognition = new webkitSpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0])
-          .map(result => result.transcript)
-          .join('');
-
-        setValue(transcript);
-      };
-
-      if (isDictating) {
-        recognition.start();
-      } else {
-        recognition.stop();
+      try {
+        const suggestion = await prioritizeTask({
+          userId: userId,
+          goal: goal,
+          energyLevel: energyLevel,
+        });
+        setAiTaskSuggestion(suggestion);
+        if (suggestion?.taskName && suggestion?.justification) {
+          speak(`AI Task Suggestion: ${suggestion.taskName}. Justification: ${suggestion.justification}`);
+        }
+      } catch (error: any) {
+        toast({
+          title: "Failed to get AI task suggestion",
+          description: error.message,
+          variant: "destructive",
+        });
       }
+    }, [userId, goal, energyLevel, toast, speak]);
 
-      return () => {
-        recognition.stop();
-      };
-    }, [isDictating, setValue]);
+  const handleSelectTask = (task: Task) => {
+      setCurrentTask(task);
+      setTimeRemaining(workDuration * 60);
   };
-
-  // Use the hook for the task name field
-  useSpeechRecognition((value) => {
-    form.setValue("name", value);
-  }, isDictatingName);
-
-  // Use the hook for the task description field
-  useSpeechRecognition((value) => {
-    form.setValue("description", value);
-  }, isDictatingDescription);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -320,16 +274,42 @@ export default function Home() {
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label htmlFor="goal">Goal</Label>
-            <Input
-              type="text"
-              id="goal"
-              placeholder="Enter your current goal"
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-            />
-          </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit((values) => setGoal(values.goal))} className="flex flex-col space-y-2">
+              <FormField
+                control={form.control}
+                name="goal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Goal</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="What do you want to achieve?"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit">Set Goal</Button>
+            </form>
+          </Form>
+          {aiTaskSuggestion && (
+            <div className="border rounded p-2">
+              <p>AI Task Suggestion: {aiTaskSuggestion.taskName}</p>
+              <p>Justification: {aiTaskSuggestion.justification}</p>
+              <Button onClick={() => {
+                const task = {
+                  id: aiTaskSuggestion.taskId,
+                  name: aiTaskSuggestion.taskName,
+                  description: aiTaskSuggestion.justification,
+                  completed: false,
+                };
+                handleSelectTask(task);
+              }}>Select Task</Button>
+            </div>
+          )}
           {focusSuggestion && (
             <div className="border rounded p-2">
               <p>Focus Suggestion: {focusSuggestion.suggestion}</p>
@@ -340,109 +320,6 @@ export default function Home() {
           <Button onClick={toggleTimer}>{isWorking ? "Pause" : "Start"}</Button>
           <Button variant="secondary" onClick={resetTimer}>Reset</Button>
         </CardFooter>
-      </Card>
-
-      <Card className="w-full max-w-md mt-4">
-        <CardHeader>
-          <CardTitle>Task List</CardTitle>
-          <CardDescription>Manage your tasks</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(addTask)} className="flex flex-col space-y-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Task Name</FormLabel>
-                    <div className="flex rounded-md shadow-sm">
-                      <FormControl>
-                        <Input placeholder="Enter task name" {...field} />
-                      </FormControl>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setIsDictatingName(!isDictatingName)}
-                      >
-                        {isDictatingName ? <Icons.pause /> : <Icons.mic />}
-                      </Button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Task Description</FormLabel>
-                    <div className="flex rounded-md shadow-sm">
-                      <FormControl>
-                        <Textarea placeholder="Enter task description" {...field} />
-                      </FormControl>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setIsDictatingDescription(!isDictatingDescription)}
-                      >
-                        {isDictatingDescription ? <Icons.pause /> : <Icons.mic />}
-                      </Button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit">Add Task</Button>
-            </form>
-          </Form>
-          <ul className="mt-4 space-y-2">
-            {tasks.map((task) => (
-              <li key={task.id} className="flex items-start justify-between">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`task-${task.id}`}
-                    checked={task.completed}
-                    onCheckedChange={() => toggleComplete(task.id)}
-                  />
-                  <div className="flex flex-col">
-                    <Label htmlFor={`task-${task.id}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      {task.name}
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      {task.description}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const newName = prompt("Enter new task name", task.name);
-                      const newDescription = prompt("Enter new task description", task.description);
-                      if (newName && newDescription) {
-                        editTask(task.id, newName, newDescription);
-                      }
-                    }}
-                  >
-                    <Icons.edit className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => deleteTask(task.id)}>
-                    <Icons.trash className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => {
-                    setCurrentTask(task);
-                    setTimeRemaining(workDuration * 60);
-                  }}>
-                    <Icons.arrowRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
       </Card>
 
       <div className="flex justify-center space-x-4 mt-4">
