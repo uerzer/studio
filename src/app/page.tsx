@@ -52,10 +52,18 @@ const useTextToSpeech = () => {
       // Check if responsiveVoice is defined
       if (window.responsiveVoice) {
         // Initialize responsiveVoice with API key if it's not already initialized
-        if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
-            window.responsiveVoice.apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
+        if (!window.responsiveVoice.apiKey) {
+          const apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
+          if (apiKey) {
+            window.responsiveVoice.apiKey = apiKey;
+            setIsSpeechAvailable(true);
+          } else {
+            console.warn("ResponsiveVoice API key is missing. Text-to-speech will be unavailable.");
+            setIsSpeechAvailable(false); // Ensure speech is not available if API key is missing
+          }
+        } else {
+          setIsSpeechAvailable(true);
         }
-        setIsSpeechAvailable(true);
       } else {
         // Load responsiveVoice dynamically if it's not already loaded
         const script = document.createElement('script');
@@ -64,11 +72,19 @@ const useTextToSpeech = () => {
         document.body.appendChild(script);
 
         script.onload = () => {
-            // Initialize responsiveVoice with API key if it's not already initialized
-            if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
-              window.responsiveVoice.apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
+          // Initialize responsiveVoice with API key if it's not already initialized
+          if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
+            const apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
+            if (apiKey) {
+              window.responsiveVoice.apiKey = apiKey;
+              setIsSpeechAvailable(true);
+            } else {
+              console.warn("ResponsiveVoice API key is missing. Text-to-speech will be unavailable.");
+              setIsSpeechAvailable(false); // Ensure speech is not available if API key is missing
             }
-          setIsSpeechAvailable(true);
+          } else {
+            setIsSpeechAvailable(true);
+          }
         };
       }
     }
@@ -435,4 +451,3 @@ export default function Home() {
     </div>
   );
 }
-
