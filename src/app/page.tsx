@@ -53,8 +53,11 @@ const useTextToSpeech = () => {
         if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
           const apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
           if (apiKey) {
-            window.responsiveVoice.apiKey = apiKey;
-            setIsSpeechAvailable(true);
+            if (window.responsiveVoice) {
+              window.responsiveVoice.apiKey = apiKey;
+              setIsSpeechAvailable(true);
+            }
+
           } else {
             console.warn("ResponsiveVoice API key is missing. Text-to-speech will be unavailable.");
             setIsSpeechAvailable(false);
@@ -70,8 +73,10 @@ const useTextToSpeech = () => {
             if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
               const apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
               if (apiKey) {
-                window.responsiveVoice.apiKey = apiKey;
-                setIsSpeechAvailable(true);
+                if (window.responsiveVoice) {
+                  window.responsiveVoice.apiKey = apiKey;
+                  setIsSpeechAvailable(true);
+                }
               } else {
                 console.warn("ResponsiveVoice API key is missing. Text-to-speech will be unavailable.");
                 setIsSpeechAvailable(false);
