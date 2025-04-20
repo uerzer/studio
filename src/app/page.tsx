@@ -51,6 +51,10 @@ const useTextToSpeech = () => {
     if (typeof window !== 'undefined') {
       // Check if responsiveVoice is defined
       if (window.responsiveVoice) {
+        // Initialize responsiveVoice with API key if it's not already initialized
+        if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
+            window.responsiveVoice.apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
+        }
         setIsSpeechAvailable(true);
       } else {
         // Load responsiveVoice dynamically if it's not already loaded
@@ -71,7 +75,7 @@ const useTextToSpeech = () => {
   }, []);
 
   const speak = (text: string) => {
-    if (isSpeechAvailable) {
+    if (isSpeechAvailable && window.responsiveVoice) {
       window.responsiveVoice.speak(text);
     } else {
       console.warn("Text-to-speech is not available.");
