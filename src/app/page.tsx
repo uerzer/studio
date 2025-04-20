@@ -285,7 +285,7 @@ export default function Home() {
                     <FormItem>
                       <FormLabel>Goal</FormLabel>
                       <FormControl>
-                        <>
+                        <div id={field.name}>
                           <Input
                             placeholder="What do you want to achieve?"
                             {...field}
@@ -294,7 +294,7 @@ export default function Home() {
                             onResult={(text) => field.onChange(text)}
                             className="absolute right-2 top-2"
                           />
-                        </>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
