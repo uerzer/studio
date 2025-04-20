@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,46 +48,44 @@ const useTextToSpeech = () => {
   const [isSpeechAvailable, setIsSpeechAvailable] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Check if responsiveVoice is defined
-      if (window.responsiveVoice) {
-        // Initialize responsiveVoice with API key if it's not already initialized
-        if (!window.responsiveVoice.apiKey) {
+    const initializeSpeech = () => {
+      if (typeof window !== 'undefined') {
+        if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
           const apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
           if (apiKey) {
             window.responsiveVoice.apiKey = apiKey;
             setIsSpeechAvailable(true);
           } else {
             console.warn("ResponsiveVoice API key is missing. Text-to-speech will be unavailable.");
-            setIsSpeechAvailable(false); // Ensure speech is not available if API key is missing
+            setIsSpeechAvailable(false);
           }
-        } else {
+        } else if (window.responsiveVoice) {
           setIsSpeechAvailable(true);
-        }
-      } else {
-        // Load responsiveVoice dynamically if it's not already loaded
-        const script = document.createElement('script');
-        script.src = 'https://code.responsivevoice.org/responsivevoice.js';
-        script.async = true;
-        document.body.appendChild(script);
-
-        script.onload = () => {
-          // Initialize responsiveVoice with API key if it's not already initialized
-          if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
-            const apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
-            if (apiKey) {
-              window.responsiveVoice.apiKey = apiKey;
+        } else {
+          // Load responsiveVoice dynamically if it's not already loaded
+          const script = document.createElement('script');
+          script.src = 'https://code.responsivevoice.org/responsivevoice.js';
+          script.async = true;
+          script.onload = () => {
+            if (window.responsiveVoice && !window.responsiveVoice.apiKey) {
+              const apiKey = process.env.NEXT_PUBLIC_RESPONSIVE_VOICE_API_KEY;
+              if (apiKey) {
+                window.responsiveVoice.apiKey = apiKey;
+                setIsSpeechAvailable(true);
+              } else {
+                console.warn("ResponsiveVoice API key is missing. Text-to-speech will be unavailable.");
+                setIsSpeechAvailable(false);
+              }
+            } else if (window.responsiveVoice) {
               setIsSpeechAvailable(true);
-            } else {
-              console.warn("ResponsiveVoice API key is missing. Text-to-speech will be unavailable.");
-              setIsSpeechAvailable(false); // Ensure speech is not available if API key is missing
             }
-          } else {
-            setIsSpeechAvailable(true);
-          }
-        };
+          };
+          document.body.appendChild(script);
+        }
       }
-    }
+    };
+
+    initializeSpeech();
   }, []);
 
   const speak = (text: string) => {
@@ -285,7 +283,7 @@ export default function Home() {
                     <FormItem>
                       <FormLabel>Goal</FormLabel>
                       <FormControl>
-                        <div id={field.name}>
+                        <div >
                           <Input
                             placeholder="What do you want to achieve?"
                             {...field}
