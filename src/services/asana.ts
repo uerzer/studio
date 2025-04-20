@@ -28,13 +28,8 @@ export interface AsanaTask {
  */
 export async function getAsanaTasks(userId: string): Promise<AsanaTask[]> {
   // TODO: Implement this by calling the Asana API.
+  // Returning an empty array for now.
 
-  return [
-    {
-      id: '12345',
-      name: 'Sample Asana Task',
-      completed: false,
-      notes: 'This is a sample task from Asana.',
-    },
-  ];
+  return [];
 }
+
