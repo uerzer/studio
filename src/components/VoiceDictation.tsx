@@ -29,7 +29,7 @@ const VoiceDictation: React.FC<VoiceDictationProps> = ({ onResult }) => {
       setIsListening(true);
     };
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: SpeechRecognitionResult) => {
       const transcript = event.results[0][0].transcript;
       setTranscribedText(transcript);
       onResult(transcript);
@@ -39,7 +39,7 @@ const VoiceDictation: React.FC<VoiceDictationProps> = ({ onResult }) => {
       setIsListening(false);
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: SpeechRecognitionResult) => {
       console.error('Speech recognition error:', event.error);
     };
 
